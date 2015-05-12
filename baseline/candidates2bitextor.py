@@ -107,7 +107,7 @@ def write_lett(sdict, tdict, slang, tlang, f):
                 mime=mime_type,
                 enc=encoding,
                 name=original_url,
-                html=base64.b64encode(html),
+                html=base64.b64encode(html.decode("utf-8")),
                 text=base64.b64encode(text.encode("utf-8"))))
 
 if __name__ == "__main__":
