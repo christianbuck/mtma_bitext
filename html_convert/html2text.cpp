@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-#include "compact_lang_det.h"
+#include <compact_lang_det.h>
 #include "getopt.h"
 #include "gumbo.h"
 #include "tld.h"
@@ -182,7 +182,7 @@ static void DumpLinks(const string& header, GumboNode* node,
 void ProcessBuffer(const string& header, const string& buffer,
                    const int split_by_language, ofstream* text_file,
                    ofstream* pdf_links_file, ofstream* language_stats_file) {
-  if (header.empty() || buffer.empty()) {
+  if (buffer.empty()) {
     return;
   }
   GumboOutput* output = gumbo_parse(buffer.c_str());
@@ -190,7 +190,8 @@ void ProcessBuffer(const string& header, const string& buffer,
   if (text_file->is_open() || language_stats_file->is_open()) {
     string text = DumpText(output->root);
     if (!split_by_language) {
-      *text_file << header << std::endl;
+      if (!header.empty())
+	*text_file << header << std::endl;
       *text_file << text << std::endl;
     } else {
       int flags = 0;
