@@ -43,6 +43,9 @@ def html2text(html):
                 outbuf.append(u"".join(current_line))
                 current_line = []
 
+        if token_name == 'span':
+            current_line.append(u" ")
+
         if token.get(u'type', None) == u'Characters':
             current_line.append(token['data'])
         if token.get(u'type', None) == u'SpaceCharacters':
