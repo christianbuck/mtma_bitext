@@ -29,7 +29,7 @@ ${BT}/bitextor-align-documents ${RIDX} -l ${LETTR}  > ${DOCS}
 echo -n "SENTS .. "
 ${BT}/bitextor-align-segments --lang1 en --lang2 fr  < ${DOCS} > ${SENT} 2> ${LOG}
 echo -n "Cleaning up .. "
-rm -f ${IDX} ${LETTR} ${RIDX} ${DIST} ${DOCS}
+rm -f ${IDX} ${LETTR} ${RIDX} ${DIST} ${DOCS} ${LOG}
 echo "Done! "
 echo -n "EN: " 
 cut -f 3 ${SENT} | wc
