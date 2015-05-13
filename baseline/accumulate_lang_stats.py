@@ -19,7 +19,9 @@ for line in sys.stdin:
         for l in buf:
             sys.stdout.write("%s %s %d\n" % (domain, l, buf[l]))
         buf = defaultdict(int)
+        domain = d
     buf[lang] += n
+
 
 for l in buf:
     sys.stdout.write("%s %s %d\n" % (domain, l, buf[l]))
