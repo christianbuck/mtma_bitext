@@ -7,6 +7,7 @@ and prints url and number of bytes
 """
 
 import sys
+from urlparse import urlparse
 
 magic_numer = "df6fa1abb58549287111ba8d776733e9"
 
@@ -19,6 +20,9 @@ def process_buffer(buf, langcode):
     sys.stdout.write("%s\t%s\t%d\n" % (url, langcode, nbytes))
 
 
+def get_domain(url):
+    return urlparse(url).netloc
+
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
@@ -27,9 +31,9 @@ if __name__ == "__main__":
 
     buf = []
     for line in sys.stdin:
-        line = line
         if line.startswith(magic_numer):
             url = line.split()[2].rstrip()
+            url = get_domain(url)
             if buf and buf[0] == url:
                 continue
             process_buffer(buf, args.langcode)
@@ -37,4 +41,5 @@ if __name__ == "__main__":
             continue
         buf.append(line)
     process_buffer(buf, args.langcode)
+
 
