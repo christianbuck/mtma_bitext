@@ -2,8 +2,8 @@
 
 set -e -o pipefail
 
-LETT=$1
-DICT=$2
+DICT=$1
+LETT=$2
 
 LETTR=${LETT}r
 IDX=${LETT/lett/idx}
