@@ -27,15 +27,22 @@ def process_buffer(buf, d):
         if not buf[skip].strip():
             empty_lines += 1
 
-    detector = UniversalDetector()
-    for line in buf[skip + 1:]:
-        detector.feed(line)
-        if detector.done:
-            break
-    detector.close()
-    encoding = detector.result
     html = "".join(buf[skip + 1:])
-    html = html.decode(encoding["encoding"])
+    try:
+        html = html.decode("utf-8")
+    except:
+        try:
+            detector = UniversalDetector()
+            for line in buf[skip + 1:]:
+                detector.feed(line)
+                if detector.done:
+                    break
+            detector.close()
+            encoding = detector.result
+            html = html.decode(encoding["encoding"])
+        except:
+            html = html.decode("utf-8", errors='ignore')
+
     d[url] = (header, html)
 
 
