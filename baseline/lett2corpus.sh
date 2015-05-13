@@ -13,7 +13,7 @@ DOCS=${LETT/lett/docs}
 SENT=${LETT/lett/sent}
 LOG=${LETT/lett/log}
 
-BT=../bin
+BT=/home/buck/net/build/bitextor/bin
 
 
 echo -n "LETT .. LETTR .. "
