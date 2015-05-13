@@ -9,22 +9,27 @@ Reads candidates and writes lett format to be processed by
 import sys
 import base64
 from html2text import html2text
-import chardet
 from chardet.universaldetector import UniversalDetector
 
 magic_numer = "df6fa1abb58549287111ba8d776733e9"
 
 
 def process_buffer(buf):
-    detector = UniversalDetector()
-    for line in buf:
-        detector.feed(line)
-        if detector.done:
-            break
-    detector.close()
-    encoding = detector.result
     html = "".join(buf)
-    html = html.decode(encoding["encoding"])
+    try:
+        html = html.decode("utf-8")
+    except:
+        try:
+            detector = UniversalDetector()
+            for line in buf:
+                detector.feed(line)
+                if detector.done:
+                    break
+            detector.close()
+            encoding = detector.result
+            html = html.decode(encoding["encoding"], errors='ignore')
+        except:
+            html = html.decode("utf-8", errors='ignore')
     return html
 
 
