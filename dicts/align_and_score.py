@@ -13,23 +13,29 @@ import sys
 ScoresAndLines = namedtuple('ScoreAndLines', ['line_equality_ratio', 'jaccard_sim', 'aligned_lines'])
 
 def align_lines_and_score(warc_a, warc_b_tr):
-    s = difflib.SequenceMatcher(None, warc_a[2], warc_b_tr[3])
+
+    s = difflib.SequenceMatcher(None, warc_a, warc_b_tr)
 
     replace_ranges = [(en_start, en_end, fr_start, fr_end)
                    for op, en_start, en_end, fr_start, fr_end in s.get_opcodes()
                    if op == 'replace' or (op == 'equal' and en_end - en_start == 1)]
-#     print(diff_ranges)
+
     jaccard_sim_sum = 0
     num_vocab = 0
     lines = []
-
+        
     for en_start, en_end, fr_start, fr_end in replace_ranges:
 
         # if '\n'.join(warc_b_tr[3][fr_start:fr_end]).lower() == '\n'.join(warc_b_tr[2][fr_start:fr_end]).lower():
             # continue
 
-        words_en = set('\n'.join(warc_a[2][en_start:en_end]).split())
-        words_fr = set('\n'.join(warc_b_tr[3][fr_start:fr_end]).split())
+        words_en = set(y for x in warc_a[en_start:en_end] for y in x.split())
+        words_fr = set(y for x in warc_b_tr[fr_start:fr_end] for y in x.split() )
+
+        # words_en = {'hello', 'word'}
+        # words_fr = {'n', 'a'}
+        # print(words_en)
+        # print(words_fr)
 
         if len(words_en | words_fr) == 0:
             continue
@@ -79,9 +85,6 @@ def parseargs():
 
 if __name__ == '__main__':
     args = parseargs()
-    
-    
-
     logger = get_logger(logging.DEBUG) if args.verbose else get_logger(logging.WARN)
 
     with shelve.open(args.SRC_SHELVE, 'r') as src_warc, shelve.open(args.TGT_SHELVE, 'r') as tgt_warc:
