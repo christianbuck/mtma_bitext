@@ -5,9 +5,8 @@ import sys
 import logging
 import fileinput
 import htmllaundry
-import tidylib
+from tidylib import tidy_document
 import re
-import shelve
 from bs4 import BeautifulSoup
 import argparse
 import goslate
@@ -17,77 +16,35 @@ from retry import retry
 import os.path
 
 
-def html_cleaner(html):
-    soup = BeautifulSoup('\n'.join(html))
-    [s.extract() for s in soup('script')]  # remove 'script', 'style', 'option' tags
-    [s.extract() for s in soup('style')]
-    [s.extract() for s in soup('option')]
-
-    cleaned_sents = htmllaundry.strip_markup(str(soup))  # leave only text
-
-    # remove continuous empty lines
-    cleaned_sents = re.sub(r'\n\s*\n+', '\n\n', cleaned_sents).strip()
-    cleaned_sents = re.sub(r'\s+', ' ', cleaned_sents, re.M).strip()  # remove continuous spaces
-
-    # cleaned_sents = [sent for sent in cleaned_sents.split(
-    # '\n')]  # if len(sent.split()) == 0 or len(sent.split()) >= 6]
-    return cleaned_sents.split('\n')
+from itertools import takewhile
 
 
-@retry(goslate.Error, tries=100, delay=1, max_delay=10, jitter=1)
-def gtranslate(lines, translate_src_lang):
-    logger.info('translate: %s lines', len(lines))
-    return gs.translate(lines, 'en', 'fr')
+def process_buffer(buf):
+    line_iter = iter(buf)
+    header = next(line_iter).strip().split('\t')[1:]
+    warc_header = '\n'.join(takewhile(lambda x: x.strip() != '', line_iter))
+    http_header = '\n'.join(takewhile(lambda x: x.strip() != '', line_iter))
+    html_content = '\n'.join(line_iter)
+    return header, warc_header, http_header, html_content
 
 
-# def print(*vargs, **kvargs): pass
+MAGIC_NUMER = "df6fa1abb58549287111ba8d776733e9"
 
 
-def warc_to_parts(lines, translate_src_lang):
-    part_name = 'START'
-
-    warc, http, html = [], [], []
-    for line in lines:
-        line = line.strip()
-
-        if part_name == 'START':
-            if line == '':
-                continue
-            else:
-                part_name = 'WARC'
-
-        if part_name == 'WARC':
-            if line.startswith('WARC-Target-URI: '):
-                url = line[len('WARC-Target-URI: '):]
-            if line == '':
-                part_name = 'HTTP'
-                continue
-            warc.append(line)
-
-        elif part_name == 'HTTP':
-            if line == '':
-                part_name = 'HTML'
-                continue
-            http.append(line)
-
-        elif part_name == 'HTML':
-            html.append(line)
-            if line == '</html>':
-                part_name = 'START'
-
-                cleaned_html_lines = html_cleaner(html)
-                translated_cleaned_html_lines = (
-                    list(gtranslate(cleaned_html_lines, translate_src_lang))
-                    if translate_src_lang else None)
-
-                yield url, (warc, http, cleaned_html_lines, translated_cleaned_html_lines)
-
-                warc, http, html = [], [], []
+def read_warc_file(f):
+    buf = []
+    for line in f:
+        if line.startswith(MAGIC_NUMER) and buf:
+            yield process_buffer(buf)
+            buf = []
+        buf.append(line)
+    yield process_buffer(buf)
 
 
 def get_logger(lvl):
     logger = logging.getLogger(os.path.basename(sys.argv[0]))
     logger.setLevel(lvl)
+    logger.handlers = []
     ch = logging.StreamHandler()
     # ch.setLevel(logging.DEBUG)
     formatter = logging.Formatter(
@@ -100,21 +57,106 @@ def get_logger(lvl):
 
 def parseargs():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-t', '--translate-from', metavar='LANG', dest='SRC_LANG')
+    parser.add_argument(
+        '-t', '--translate-src-tgt', nargs=2, metavar=['SRC_LANG', 'TGT_LANG'], dest='TRANS_SRC_TGT')
     parser.add_argument('SHELVE', help='Output shelve database file')
     parser.add_argument('FILE', nargs='*', help='Input WARC file. (default: stdin)')
     parser.add_argument('-v', '--verbose',  help='Produce verbose message', action='store_true')
+    parser.add_argument('-n', '--number',  help='Number of pages to process', type=int, dest='NUM')
     return parser.parse_args()
 
 
+def html_clean(html):
+    import lxml.html.clean
+    import lxml.html
+    import lxml.etree
+
+    html, errors = tidy_document(html,
+                                 # Tidy options: http://tidy.sourceforge.net/docs/quickref.html
+                                 options={'bare': 1, 'clean': 1, 'output-xhtml': 1,
+                                          'drop-font-tags': 1, 'drop-proprietary-attributes': 1,
+                                          'hide-comments': 1,
+                                          'char-encoding': 'utf8', 'input-encoding': 'utf8', 'output-encoding': 'utf8'})
+    cleaner = lxml.html.clean.Cleaner(
+        kill_tags=frozenset(['script', 'style', 'option']),
+        remove_tags=frozenset(['a']),
+        safe_attrs_only=True, safe_attrs=frozenset())
+    html = cleaner.clean_html(html)
+
+    # html = lxml.etree.tostring(lxml.html.fromstring(html), pretty_print=True).decode('utf8')
+
+    # html = html.encode('utf-8', errors='strict')
+    soup = BeautifulSoup(html)
+    # [s.extract() for s in soup('script')]  # remove 'script', 'style', 'option' tags
+    # [s.extract() for s in soup('style')]
+    # [s.extract() for s in soup('option')]
+    html = soup.prettify()
+
+    # html = htmllaundry.strip_markup(html)  # leave only text
+
+    # remove continuous empty lines
+    html = re.sub(r'\n\s*\n+', '\n\n', html).strip()
+    html = re.sub(r'[ \t]+', ' ', html, re.M).strip()  # remove continuous spaces
+
+    # cleaned_html = [sent for sent in cleaned_html.split(
+    # '\n')]  # if len(sent.split()) == 0 or len(sent.split()) >= 6]
+    return [line.strip() for line in html.split('\n')]
+
+import cld2
+
+
+@retry(goslate.Error, tries=100, delay=1, max_delay=10, jitter=1)
+def translate_line_or_not(line, src_lang, tgt_lang):
+    if not line:
+        return line, None
+    try:
+        isReliable, _, lang_details = cld2.detect(line)
+    except ValueError:
+        return line, None
+
+    if isReliable and lang_details[0][1].decode() == src_lang:
+        trans_line = gs.translate(line, tgt_lang, src_lang)
+        return trans_line, src_lang
+    else:
+        return line, None
+
+from concurrent.futures import ThreadPoolExecutor
+
+
+def translate(lines, src_lang, tgt_lang):
+    with ThreadPoolExecutor(max_workers=100) as executor:
+        lines_with_tag = list(
+            executor.map(lambda l: translate_line_or_not(l, src_lang, tgt_lang), lines))
+
+    lines, tags = zip(*lines_with_tag)
+    logger.info('translate: %s lines', sum(1 for tag in tags if tag))
+    return lines, tags
+
+
+from itertools import islice
+from collections import namedtuple
+# WarcData = namedtuple('WarcData', ['warc_header', 'http_header', 'html_lines', 'trans_html_lines', 'trans_tags'])
+
 if __name__ == '__main__':
     args = parseargs()
-
     logger = get_logger(logging.DEBUG) if args.verbose else get_logger(logging.WARN)
-
     gs = goslate.Goslate(executor=concurrent.futures.ThreadPoolExecutor(max_workers=120))
-    with shelve.open(args.SHELVE) as ted_fr_shelve:
-        for url, parts in warc_to_parts(
-                fileinput.input(args.FILE),
-                args.SRC_LANG):
-            ted_fr_shelve[url] = parts
+
+    with shelve.open(args.SHELVE) as ted_shelve, fileinput.input(args.FILE) as f:
+        for i, (header, warc_header, http_header, html_content) in islice(enumerate(read_warc_file(f)), 0, args.NUM):
+            
+            logger.info('Processing page number: %d', i)
+            
+            cleaned_html_lines = html_clean(html_content)
+            trans_cleaned_html_lines, translate_tags = (
+                translate(cleaned_html_lines,
+                          args.TRANS_SRC_TGT[0],
+                          args.TRANS_SRC_TGT[1])
+                if args.TRANS_SRC_TGT
+                else (None, None))
+
+            ted_shelve[header[1]] = (warc_header,
+                                     http_header,
+                                     cleaned_html_lines,
+                                     trans_cleaned_html_lines,
+                                     translate_tags)
