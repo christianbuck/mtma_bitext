@@ -40,7 +40,7 @@ optional arguments:
   -n NUM, --number NUM  Number of pages to process
   
 $ python3 warc_to_shelve.py ted_en.shelve ../../ted.com_ENGLISH -v
-$ python3 warc_to_shelve.py ted_fr.shelve ../../ted.com_FRENCH -d fr en-fr.dic
+$ python3 warc_to_shelve.py ted_fr.shelve ../../ted.com_FRENCH -d fr en-fr.dic -v
 ```
 
 ## Do line alignment and scoring
