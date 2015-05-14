@@ -31,8 +31,8 @@ optional arguments:
   -t LANG, --translate-from LANG
   -v, --verbose         Produce verbose message
 
-$ python3 warc_to_shelve.py ted_en.shelve ../../ted.com_ENGLISH.six
-$ python3 warc_to_shelve.py -t fr ted_fr.shelve ../../ted.com_FRENCH.six
+$ python3 warc_to_shelve.py ted_en.shelve ../../ted.com_ENGLISH
+$ python3 warc_to_shelve.py -t fr ted_fr.shelve ../../ted.com_FRENCH
 ```
 
 ## Do line alignment and scoring
@@ -40,7 +40,7 @@ $ python3 warc_to_shelve.py -t fr ted_fr.shelve ../../ted.com_FRENCH.six
 
 ```console
 $ python3 align_and_score.py -h
-usage: align_similarity.py [-h] [-p] [-v] SRC_SHELVE TGT_SHELVE
+usage: align_and_score.py [-h] [-p] [-v] SRC_SHELVE TGT_SHELVE
 
 positional arguments:
   SRC_SHELVE            Source shelve database file
@@ -52,7 +52,7 @@ optional arguments:
                         Print aliged sentences
   -v, --verbose         Produce verbose message
   
-$ python3 align_similarity.py ted_en.shelve ted_fr.shelve
+$ python3 align_and_score.py ted_en.shelve ted_fr.shelve
  * http://www.ted.com/talks/lang/en/robin_chase_on_zipcar_and_her_next_big_idea.html
    --> http://www.ted.com/talks/lang/fr/robin_chase_on_zipcar_and_her_next_big_idea.html
    line equality ratio: 0.26681614349775784	 jaccard sim: 0.41129831516352827
