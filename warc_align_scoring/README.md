@@ -11,6 +11,7 @@ $ unxz ted.com_FRENCH.xz
 
 ```console
 $ pip3 install -r requirements
+$ pip3 install 'git+https://github.com/GregBowyer/cld2-cffi.git'
 ```
 
 ## Build shelve database from WARC file
@@ -20,7 +21,10 @@ $ pip3 install -r requirements
 
 ```console
 $ python3 warc_to_shelve.py -h
-usage: warc_to_shelve.py [-h] [-t LANG] [-v] SHELVE [FILE [FILE ...]]
+usage: warc_to_shelve.py [-h]
+                         [-g SRC_LANG TGT_LANG | -d SRC_LANG DICTIONARY_FILE]
+                         [-v] [-n NUM]
+                         SHELVE [FILE [FILE ...]]
 
 positional arguments:
   SHELVE                Output shelve database file
@@ -28,11 +32,15 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
-  -t LANG, --translate-from LANG
+  -g SRC_LANG TGT_LANG, --google-translate SRC_LANG TGT_LANG
+                        Google Translate
+  -d SRC_LANG DICTIONARY_FILE, --dictionary-translate SRC_LANG DICTIONARY_FILE
+                        Dictionary translate
   -v, --verbose         Produce verbose message
-
-$ python3 warc_to_shelve.py ted_en.shelve ../../ted.com_ENGLISH
-$ python3 warc_to_shelve.py -t fr ted_fr.shelve ../../ted.com_FRENCH
+  -n NUM, --number NUM  Number of pages to process
+  
+$ python3 warc_to_shelve.py ted_en.shelve ../../ted.com_ENGLISH -v
+$ python3 warc_to_shelve.py ted_fr.shelve ../../ted.com_FRENCH -d fr en-fr.dic
 ```
 
 ## Do line alignment and scoring
