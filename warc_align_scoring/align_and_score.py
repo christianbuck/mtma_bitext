@@ -34,8 +34,8 @@ def align_lines_and_score(warc_a, warc_b_tr):
         # if '\n'.join(warc_b_tr[3][fr_start:fr_end]).lower() == '\n'.join(warc_b_tr[2][fr_start:fr_end]).lower():
             # continue
 
-        words_en = set('\n'.join(warc_a[2][en_start:en_end]).split())
-        words_fr = set('\n'.join(warc_b_tr[3][fr_start:fr_end]).split())
+        words_en = set('\n'.join(warc_a[2][en_start:en_end]).lower().split())
+        words_fr = set('\n'.join(warc_b_tr[3][fr_start:fr_end]).lower().split())
 
         if len(words_en | words_fr) == 0:
             continue
