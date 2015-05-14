@@ -22,7 +22,7 @@ def align_lines_and_score(warc_a, warc_b_tr):
                       for op, en_start, en_end, fr_start, fr_end in s.get_opcodes()
                       if op == 'replace'
                       # or (op == 'equal' and en_end - en_start == 1)
-    ]
+                      ]
     # print(replace_ranges)
 #     print(diff_ranges)
     jaccard_sim_sum = 0
@@ -54,22 +54,9 @@ def align_lines_and_score(warc_a, warc_b_tr):
              '\n'.join(warc_b_tr[3][fr_start:fr_end]),
              '\n'.join(warc_b_tr[2][fr_start:fr_end]),
              (en_start, en_end, fr_start, fr_end)
-            ))
+             ))
 
     return ScoresAndLines(s.ratio(), jaccard_sim_sum / num_vocab, lines)
-
-
-def get_logger(lvl):
-    logger = logging.getLogger(os.path.basename(sys.argv[0]))
-    logger.setLevel(lvl)
-    ch = logging.StreamHandler()
-    # ch.setLevel(logging.DEBUG)
-    formatter = logging.Formatter(
-        ' \033[1;32m*\033[m %(asctime)s %(name)s %(levelname)s %(message)s',
-        datefmt='%m/%d/%Y %H:%M:%S')
-    ch.setFormatter(formatter)
-    logger.addHandler(ch)
-    return logger
 
 
 def parseargs():
@@ -100,8 +87,8 @@ def get_logger(lvl):
 
 from colored import fg, attr, colored, bg
 COLORS = colored('black').paint.keys()
-COLOR_STR_MAP = {color.upper()+'_FG': fg(color) for color in COLORS}
-COLOR_STR_MAP.update({color.upper()+'_BG': fg(color) for color in COLORS})
+COLOR_STR_MAP = {color.upper() + '_FG': fg(color) for color in COLORS}
+COLOR_STR_MAP.update({color.upper() + '_BG': fg(color) for color in COLORS})
 COLOR_STR_MAP['RESET'] = attr('reset')
 
 from itertools import islice
@@ -109,8 +96,6 @@ if __name__ == '__main__':
     args = parseargs()
 
     logger = get_logger(logging.DEBUG) if args.verbose else get_logger(logging.WARN)
-
-    
 
     with shelve.open(args.SRC_SHELVE, 'r') as src_warc, shelve.open(args.TGT_SHELVE, 'r') as tgt_warc:
 
@@ -127,7 +112,7 @@ if __name__ == '__main__':
                     src_url, best_tgt_url, **COLOR_STR_MAP))
             print('   line equality ratio: {YELLOW_FG}{}{RESET}  jaccard sim: {YELLOW_FG}{}{RESET}'.format(
                 line_equality_ratio, jaccard_sim, **COLOR_STR_MAP))
-            
+
             if args.print_sentences:
                 print(
                     *(
@@ -136,6 +121,6 @@ if __name__ == '__main__':
                          '{RED_FG}EN:\n{en}\n\n'
                          '{GREEN_FG}FREN:\n{fr_to_en}\n\n'
                          '{BLUE_FG}FR:\n{fr}\n\n{RESET}'
-                        ).format(en=en, fr_to_en = fr_to_en, fr = fr,
-                                 replace_range = replace_range, **COLOR_STR_MAP)
-                    for en, fr_to_en, fr, replace_range in aligned_lines))
+                         ).format(en=en, fr_to_en=fr_to_en, fr=fr,
+                                  replace_range=replace_range, **COLOR_STR_MAP)
+                        for en, fr_to_en, fr, replace_range in aligned_lines))

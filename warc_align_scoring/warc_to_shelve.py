@@ -4,7 +4,7 @@ from __future__ import print_function
 import sys
 import logging
 import fileinput
-import htmllaundry
+# import htmllaundry
 from tidylib import tidy_document
 import re
 from bs4 import BeautifulSoup
@@ -57,13 +57,38 @@ def get_logger(lvl):
 
 def parseargs():
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '-t', '--translate-src-tgt', nargs=2, metavar=['SRC_LANG', 'TGT_LANG'], dest='TRANS_SRC_TGT')
+
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('-g', '--google-translate',
+                       nargs=2, metavar=('SRC_LANG', 'TGT_LANG'),
+                       help='Google Translate', )
+    group.add_argument('-d', '--dictionary-translate',
+                       nargs=2, metavar=('SRC_LANG', 'DICTIONARY_FILE'),
+                       help='Dictionary translate', )
+
     parser.add_argument('SHELVE', help='Output shelve database file')
-    parser.add_argument('FILE', nargs='*', help='Input WARC file. (default: stdin)')
-    parser.add_argument('-v', '--verbose',  help='Produce verbose message', action='store_true')
-    parser.add_argument('-n', '--number',  help='Number of pages to process', type=int, dest='NUM')
+    parser.add_argument('FILE', nargs='*',
+                        help='Input WARC file. (default: stdin)')
+
+    parser.add_argument('-v', '--verbose',
+                        help='Produce verbose message', action='store_true')
+    parser.add_argument('-n', '--number',
+                        help='Number of pages to process', type=int, dest='NUM')
+
     return parser.parse_args()
+
+
+from nltk.tokenize import sent_tokenize, word_tokenize
+
+
+def html_sent_word_tokenize(html_lines):
+    for line in html_lines:
+        line = line.strip()
+        if line.startswith('<'):
+            yield line
+        else:
+            for sent in sent_tokenize(line):
+                yield ' '.join(word_tokenize(sent))
 
 
 def html_clean(html):
@@ -79,7 +104,7 @@ def html_clean(html):
                                           'char-encoding': 'utf8', 'input-encoding': 'utf8', 'output-encoding': 'utf8'})
     cleaner = lxml.html.clean.Cleaner(
         kill_tags=frozenset(['script', 'style', 'option']),
-        remove_tags=frozenset(['a']),
+        remove_tags=frozenset(['a', 'strong', 'em']),
         safe_attrs_only=True, safe_attrs=frozenset())
     html = cleaner.clean_html(html)
 
@@ -100,33 +125,50 @@ def html_clean(html):
 
     # cleaned_html = [sent for sent in cleaned_html.split(
     # '\n')]  # if len(sent.split()) == 0 or len(sent.split()) >= 6]
-    return [line.strip() for line in html.split('\n')]
+    html_lines = html.split('\n')
+    # return html_lines
+    return list(html_sent_word_tokenize(html_lines))
 
 import cld2
 
 
 @retry(goslate.Error, tries=100, delay=1, max_delay=10, jitter=1)
-def translate_line_or_not(line, src_lang, tgt_lang):
-    if not line:
-        return line, None
+def google_translator(line, tgt_lang, src_lang):
+    return ' '.join(word_tokenize(gs.translate(line, tgt_lang, src_lang)))
+
+
+def dictionary_translator(line, dictionary):
+    return ' '.join(dictionary.get(word.lower(), word) for word in line.split())
+
+
+
+
+def translate_line_or_not(line, src_lang, translator):  # -> (translation, tag)
+    if (not line or
+            line.startswith('<') and line.endswith('>')):
+        return line, ''
+
     try:
         isReliable, _, lang_details = cld2.detect(line)
     except ValueError:
-        return line, None
+        return line, 'ValueError'
 
-    if isReliable and lang_details[0][1].decode() == src_lang:
-        trans_line = gs.translate(line, tgt_lang, src_lang)
-        return trans_line, src_lang
-    else:
-        return line, None
+    if not isReliable or lang_details[0][1].decode() != src_lang:
+        return line, lang_details[0][1].decode()
+
+    trans_line = translator(line)
+
+    return trans_line, src_lang
+
 
 from concurrent.futures import ThreadPoolExecutor
 
 
-def translate(lines, src_lang, tgt_lang):
+def translate_html_lines(lines, translator, src_lang):
     with ThreadPoolExecutor(max_workers=100) as executor:
         lines_with_tag = list(
-            executor.map(lambda l: translate_line_or_not(l, src_lang, tgt_lang), lines))
+            executor.map(lambda l: translate_line_or_not(l, src_lang, translator), lines)
+        )
 
     lines, tags = zip(*lines_with_tag)
     logger.info('translate: %s lines', sum(1 for tag in tags if tag))
@@ -134,25 +176,37 @@ def translate(lines, src_lang, tgt_lang):
 
 
 from itertools import islice
-from collections import namedtuple
+# from collections import namedtuple
+
 # WarcData = namedtuple('WarcData', ['warc_header', 'http_header', 'html_lines', 'trans_html_lines', 'trans_tags'])
 
+from functools import partial
 if __name__ == '__main__':
     args = parseargs()
     logger = get_logger(logging.DEBUG) if args.verbose else get_logger(logging.WARN)
     gs = goslate.Goslate(executor=concurrent.futures.ThreadPoolExecutor(max_workers=120))
 
+    if args.google_translate:
+        src_lang, tgt_lang = args.google_translate
+        translator = partial(google_translator, src_lang=src_lang, tgt_lang=tgt_lang)
+
+    elif args.dictionary_translate:
+        src_lang, dictionary_file = args.dictionary_translate
+        dictionary = dict(reversed(line.split()) for line in open('en-fr.dic', 'r'))
+        translator = partial(dictionary_translator, dictionary=dictionary)
+
     with shelve.open(args.SHELVE) as ted_shelve, fileinput.input(args.FILE) as f:
         for i, (header, warc_header, http_header, html_content) in islice(enumerate(read_warc_file(f)), 0, args.NUM):
-            
+
             logger.info('Processing page number: %d', i)
-            
+
             cleaned_html_lines = html_clean(html_content)
+
             trans_cleaned_html_lines, translate_tags = (
-                translate(cleaned_html_lines,
-                          args.TRANS_SRC_TGT[0],
-                          args.TRANS_SRC_TGT[1])
-                if args.TRANS_SRC_TGT
+                translate_html_lines(cleaned_html_lines,
+                                     translator,
+                                     src_lang)
+                if args.google_translate or args.dictionary_translate
                 else (None, None))
 
             ted_shelve[header[1]] = (warc_header,
