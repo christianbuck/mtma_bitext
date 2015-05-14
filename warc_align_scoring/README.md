@@ -48,17 +48,19 @@ $ python3 warc_to_shelve.py ted_fr.shelve ../../ted.com_FRENCH -d fr en-fr.dic -
 
 ```console
 $ python3 align_and_score.py -h
-usage: align_and_score.py [-h] [-p] [-v] SRC_SHELVE TGT_SHELVE
+usage: align_and_score.py [-h] [-p] [-v] [-n NUMBER] SRC_SHELVE TGT_SHELVE
 
 positional arguments:
-  SRC_SHELVE            Source shelve database file
-  TGT_SHELVE            Target shelve database file
+  SRC_SHELVE            Source WARC shelve file
+  TGT_SHELVE            Target translated WARC shelve file
 
 optional arguments:
   -h, --help            show this help message and exit
   -p, --print-sentences
                         Print aliged sentences
   -v, --verbose         Produce verbose message
+  -n NUMBER, --number NUMBER
+                        Number of English pages to process
   
 $ python3 align_and_score.py ted_en.shelve ted_fr.shelve
  * http://www.ted.com/talks/lang/en/robin_chase_on_zipcar_and_her_next_big_idea.html
