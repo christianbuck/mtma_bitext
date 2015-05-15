@@ -19,6 +19,9 @@ def main():
       	continue
       if eng == fr:
       	continue
+      if float((len(eng) + 10)) / float(len(fr) + 10) > 1.5 or float((len(eng) + 10)) / float(len(fr) + 10)  < 0.5:
+        print eng, len(eng), fr, len(fr),float((len(eng) + 10)) / float(len(fr) + 10)
+        continue
       outfile.write(line)
       endCount += 1 
 main()
