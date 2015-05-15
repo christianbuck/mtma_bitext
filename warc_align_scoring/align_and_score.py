@@ -24,7 +24,7 @@ def align_lines_and_score(warc_src, warc_tgt):
         if op == 'replace'
         # or (op == 'equal' and en_end - en_start == 1)
     ]
-    
+
     jaccard_sim_sum = 0
     num_vocab = 0
     aligned_lines = []
@@ -37,7 +37,7 @@ def align_lines_and_score(warc_src, warc_tgt):
         words_src = set('\n'.join(src_lines).lower().split())
         words_tgt = set('\n'.join(tgt_trans_lines).lower().split())
 
-        if len(words_src) == 0 or len(words_tgt)  == 0:
+        if len(words_src) == 0 or len(words_tgt) == 0:
             continue
 
         jaccard_sim_sum += len(words_src & words_tgt)
@@ -49,8 +49,8 @@ def align_lines_and_score(warc_src, warc_tgt):
                 '\n'.join(src_lines),
                 '\n'.join(tgt_lines),
                 '\n'.join(tgt_trans_lines),
-                
-             ))
+
+            ))
 
     return ScoresAndLines(s.ratio(), jaccard_sim_sum / num_vocab, aligned_lines)
 
@@ -88,7 +88,8 @@ COLOR_STR_MAP.update({color.upper() + '_BG': fg(color) for color in COLORS})
 COLOR_STR_MAP['RESET'] = attr('reset')
 
 from itertools import islice
-WARCData = namedtuple('WARCData', ['warc_header', 'http_header', 'html_lines', 'trans_html_lines', 'trans_tag'])
+WARCData = namedtuple(
+    'WARCData', ['warc_header', 'http_header', 'html_lines', 'trans_html_lines', 'trans_tag'])
 
 if __name__ == '__main__':
     args = parseargs()
@@ -97,15 +98,16 @@ if __name__ == '__main__':
 
     with shelve.open(args.SRC_SHELVE, 'r') as src_data, shelve.open(args.TGT_SHELVE, 'r') as tgt_data:
 
-        for src_url, src_data in islice(src_data.items(), 0, args.number):  # for src_url, src_data from SRC_SHELVE
+        # for src_url, src_data from SRC_SHELVE
+        for src_url, src_data in islice(src_data.items(), 0, args.number):
             src_data = WARCData(*src_data)
             tgt_urls_and_align_results = (
                 (tgt_url, align_lines_and_score(src_data, WARCData(*tgt_data)))
                 for tgt_url, tgt_data in tgt_data.items())
-            
+
             best_tgt_url, (line_equality_ratio, jaccard_sim, aligned_lines) = max(
-                               tgt_urls_and_align_results,
-                               key=lambda x: x[1].jaccard_sim)
+                tgt_urls_and_align_results,
+                key=lambda x: x[1].jaccard_sim)
 
             print(' {GREEN_FG}*{RESET} {RED_FG}{}{RESET}\n {GREEN_FG}-->{RESET} {BLUE_FG}{}{RESET}'.format(
                 src_url, best_tgt_url, **COLOR_STR_MAP))
@@ -122,4 +124,4 @@ if __name__ == '__main__':
                          '{BLUE_FG}FR:\n{fr}\n\n{RESET}'
                          ).format(en=en, fr_to_en=fr_to_en, fr=fr,
                                   replace_range=replace_range, **COLOR_STR_MAP)
-                        for replace_range, en, fr_to_en, fr  in aligned_lines))
+                        for replace_range, en, fr_to_en, fr in aligned_lines))

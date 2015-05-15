@@ -22,9 +22,9 @@ from itertools import takewhile
 def process_buffer(buf):
     line_iter = iter(buf)
     header = next(line_iter).strip().split('\t')[1:]
-    warc_header = '\n'.join(takewhile(lambda x: x.strip() != '', line_iter))
-    http_header = '\n'.join(takewhile(lambda x: x.strip() != '', line_iter))
-    html_content = '\n'.join(line_iter)
+    warc_header = ''.join(takewhile(lambda x: x.strip() != '', line_iter))
+    http_header = ''.join(takewhile(lambda x: x.strip() != '', line_iter))
+    html_content = ''.join(line_iter)
     return header, warc_header, http_header, html_content
 
 
@@ -144,7 +144,7 @@ def dictionary_translator(line, dictionary):
 def translate_line_or_not(line, src_lang, translator):  # -> (translation, tag)
     if (not line or
             line.startswith('<') and line.endswith('>')):
-        return line, ''
+        return line, '<>'
 
     try:
         isReliable, _, lang_details = cld2.detect(line)
