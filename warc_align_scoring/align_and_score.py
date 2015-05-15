@@ -87,6 +87,7 @@ COLOR_STR_MAP = {color.upper() + '_FG': fg(color) for color in COLORS}
 COLOR_STR_MAP.update({color.upper() + '_BG': fg(color) for color in COLORS})
 COLOR_STR_MAP['RESET'] = attr('reset')
 
+
 from itertools import islice
 WARCData = namedtuple(
     'WARCData', ['warc_header', 'http_header', 'html_lines', 'trans_html_lines', 'trans_tag'])
