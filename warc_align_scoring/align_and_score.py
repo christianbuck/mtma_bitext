@@ -91,6 +91,7 @@ COLOR_STR_MAP = {color.upper() + '_FG': fg(color) for color in COLORS}
 COLOR_STR_MAP.update({color.upper() + '_BG': fg(color) for color in COLORS})
 COLOR_STR_MAP['RESET'] = attr('reset')
 
+
 from itertools import islice
 if __name__ == '__main__':
     args = parseargs()
@@ -107,20 +108,22 @@ if __name__ == '__main__':
                 ),
                 key=lambda x: x[1].jaccard_sim)
 
-            print(
-                ' {GREEN_FG}*{RESET} {RED_FG}{}{RESET}\n {GREEN_FG}-->{RESET} {BLUE_FG}{}{RESET}'.format(
-                    src_url, best_tgt_url, **COLOR_STR_MAP))
-            print('   line equality ratio: {YELLOW_FG}{}{RESET}  jaccard sim: {YELLOW_FG}{}{RESET}'.format(
-                line_equality_ratio, jaccard_sim, **COLOR_STR_MAP))
+            # print(
+            #     ' {GREEN_FG}*{RESET} {RED_FG}{}{RESET}\n {GREEN_FG}-->{RESET} {BLUE_FG}{}{RESET}'.format(
+            #         src_url, best_tgt_url, **COLOR_STR_MAP))
+            # print('   line equality ratio: {YELLOW_FG}{}{RESET}  jaccard sim: {YELLOW_FG}{}{RESET}'.format(
+            #     line_equality_ratio, jaccard_sim, **COLOR_STR_MAP))
 
-            if args.print_sentences:
-                print(
-                    *(
-                        (' {YELLOW_FG}--------------{RESET}\n'
-                         '{replace_range}\n'
-                         '{RED_FG}EN:\n{en}\n\n'
-                         '{GREEN_FG}FREN:\n{fr_to_en}\n\n'
-                         '{BLUE_FG}FR:\n{fr}\n\n{RESET}'
-                         ).format(en=en, fr_to_en=fr_to_en, fr=fr,
-                                  replace_range=replace_range, **COLOR_STR_MAP)
-                        for en, fr_to_en, fr, replace_range in aligned_lines))
+            print(str(line_equality_ratio) + '\t' + str(jaccard_sim) + '\t')
+
+            # if args.print_sentences:
+            #     print(
+            #         *(
+            #             (' {YELLOW_FG}--------------{RESET}\n'
+            #              '{replace_range}\n'
+            #              '{RED_FG}EN:\n{en}\n\n'
+            #              '{GREEN_FG}FREN:\n{fr_to_en}\n\n'
+            #              '{BLUE_FG}FR:\n{fr}\n\n{RESET}'
+            #              ).format(en=en, fr_to_en=fr_to_en, fr=fr,
+            #                       replace_range=replace_range, **COLOR_STR_MAP)
+            #             for en, fr_to_en, fr, replace_range in aligned_lines))
