@@ -20,4 +20,7 @@ if __name__ == "__main__":
             host = parts.domain
         else:
             host = "%s.%s" % (parts.domain, parts.suffix)
-        sys.stdout.write("%s %s" % (host.encode("idna"), data))
+        try:
+            sys.stdout.write("%s %s" % (host.encode("idna"), data))
+        except:
+            sys.stderr.write("Invalid hostname: %s\n" %host.encode("utf-8"))
