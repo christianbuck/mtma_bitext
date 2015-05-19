@@ -14,6 +14,8 @@ if __name__ == "__main__":
     for line in sys.stdin:
         host, data = line.split(" ", 1)
         parts = tldextract.extract(host)
+        if parts.domain == "":
+            parts.domain == "empty"
         if args.domainonly:
             host = parts.domain
         else:
