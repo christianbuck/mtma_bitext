@@ -1,27 +1,56 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import argparse
 import sys
 import langid
-import re
-def main():
-  parser = argparse.ArgumentParser()
-  parser.add_argument("-i","--input", help="input file")
-  parser.add_argument("-o","--output", help="output file")
-  args = parser.parse_args()
-  outfile = open(args.output,"w")
-  endCount = 0
-  totalCount = 0
-  langid.set_languages(['en','fr'])
-  with open(args.input,"r") as infile:
-    for line in infile:
-      totalCount += 1
-      [url1, url2, eng, fr, score] = line.split("\t")
-      if langid.classify(eng)[1] < 0.3 or langid.classify(fr)[1] < 0.3:
-      	continue
-      if eng == fr:
-      	continue
-      if float((len(eng) + 10)) / float(len(fr) + 10) > 1.5 or float((len(eng) + 10)) / float(len(fr) + 10)  < 0.5:
-        print eng, len(eng), fr, len(fr),float((len(eng) + 10)) / float(len(fr) + 10)
-        continue
-      outfile.write(line)
-      endCount += 1 
-main()
+from collections import defaultdict
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('infile', nargs='?', type=argparse.FileType('r'),
+                        default=sys.stdin)
+    parser.add_argument('outfile', nargs='?', type=argparse.FileType('w'),
+                        default=sys.stdout)
+    parser.add_argument('-s', '--lang1', help='source language',
+                        dest='source_lang', default='en')
+    parser.add_argument('-t', '--lang2', help='target language',
+                        dest='target_lang', default='fr')
+    args = parser.parse_args()
+
+    deletions = defaultdict(list)
+
+    endCount = 0
+    totalCount = 0
+    langid.set_languages([args.source_lang, args.target_lang])
+    for line in args.infile:
+        totalCount += 1
+        [url1, url2, source, target, score] = line.split("\t")
+        langid_source = langid.classify(source.lower())
+        langid_target = langid.classify(target.lower())
+        if not source.strip():
+            deletions["source_empty"].append(source)
+        elif not target.strip():
+            deletions["target_empty"].append(target)
+        elif langid_source[0] != args.source_lang and langid_source[1] > 0.9:
+            deletions["source_lang"].append(
+                "%s\t%s\t%f" % (source, langid_source[0], langid_source[1]))
+        elif langid_target[0] != args.target_lang and langid_target[1] > 0.9:
+            deletions["target_lang"].append(
+                "%s\t%s\t%f" % (target, langid_target[0], langid_target[1]))
+        elif source == target:
+            deletions["identical"].append(target)
+        elif float((len(source) + 15)) / float(len(target) + 15) > 1.5:
+            deletions["source_too_long"].append("%s\t%s" % (source, target))
+        elif float((len(target) + 15)) / float(len(source) + 15) > 1.5:
+            deletions["source_too_short"].append("%s\t%s" % (source, target))
+        else:
+            args.outfile.write(line)
+            endCount += 1
+    print "Written: %d of %d = %f percent" % (endCount, totalCount,
+                                              100. * endCount / totalCount)
+    for reason, deleted in deletions.iteritems():
+        print "Deleted %d items due to %s" % (len(deleted), reason)
+        for line in deleted:
+            print "\t%s" % line
