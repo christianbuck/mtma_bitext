@@ -13,7 +13,10 @@ if __name__ == "__main__":
 
     for line in sys.stdin:
         host, data = line.split(" ", 1)
-        parts = tldextract.extract(host)
+        try:
+            parts = tldextract.extract(host)
+        except:
+            sys.stderr.write("Invalid hostname: %s\n" % host)
         if parts.domain == "":
             host = parts.suffix
         elif parts.suffix == "" or args.domainonly:
@@ -23,4 +26,4 @@ if __name__ == "__main__":
         try:
             sys.stdout.write("%s %s" % (host.encode("idna"), data))
         except:
-            sys.stderr.write("Invalid hostname: %s\n" %host.encode("utf-8"))
+            sys.stderr.write("Invalid hostname: %s\n" % host.encode("utf-8"))
