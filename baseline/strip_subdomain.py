@@ -18,4 +18,4 @@ if __name__ == "__main__":
             host = parts.domain
         else:
             host = "%s.%s" % (parts.domain, parts.suffix)
-        sys.stdout.write("%s %s" % (host, data))
+        sys.stdout.write("%s %s" % (host.encode("idna"), data))
