@@ -22,9 +22,9 @@ from itertools import takewhile
 def process_buffer(buf):
     line_iter = iter(buf)
     header = next(line_iter).strip().split('\t')[1:]
-    warc_header = '\n'.join(takewhile(lambda x: x.strip() != '', line_iter))
-    http_header = '\n'.join(takewhile(lambda x: x.strip() != '', line_iter))
-    html_content = '\n'.join(line_iter)
+    warc_header = ''.join(takewhile(lambda x: x.strip() != '', line_iter))
+    http_header = ''.join(takewhile(lambda x: x.strip() != '', line_iter))
+    html_content = ''.join(line_iter)
     return header, warc_header, http_header, html_content
 
 
@@ -141,12 +141,10 @@ def dictionary_translator(line, dictionary):
     return ' '.join(dictionary.get(word.lower(), word) for word in line.split())
 
 
-
-
 def translate_line_or_not(line, src_lang, translator):  # -> (translation, tag)
     if (not line or
             line.startswith('<') and line.endswith('>')):
-        return line, ''
+        return line, '<>'
 
     try:
         isReliable, _, lang_details = cld2.detect(line)
@@ -178,9 +176,8 @@ def translate_html_lines(lines, translator, src_lang):
 from itertools import islice
 # from collections import namedtuple
 
-# WarcData = namedtuple('WarcData', ['warc_header', 'http_header', 'html_lines', 'trans_html_lines', 'trans_tags'])
-
 from functools import partial
+
 if __name__ == '__main__':
     args = parseargs()
     logger = get_logger(logging.DEBUG) if args.verbose else get_logger(logging.WARN)
@@ -196,7 +193,7 @@ if __name__ == '__main__':
         translator = partial(dictionary_translator, dictionary=dictionary)
 
     with shelve.open(args.SHELVE) as ted_shelve, fileinput.input(args.FILE) as f:
-        for i, (header, warc_header, http_header, html_content) in islice(enumerate(read_warc_file(f)), 0, args.NUM):
+        for i, (header, warc_header, http_header, html_content) in enumerate(islice(read_warc_file(f), 0, args.NUM)):
 
             logger.info('Processing page number: %d', i)
 
