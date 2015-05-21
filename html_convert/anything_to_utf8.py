@@ -40,7 +40,7 @@ def convert_to_utf8(data, force_chardet=False):
                 data = data.decode(encoding)
             except:
                 sys.stderr.write("Fallback: ignoring errors.\n")
-                return data.decode(encoding, errors='ignore')
+                return data.decode("utf-8", errors='ignore')
     sys.stderr.write("Detected encoding: %s\n"
                      % encoding)
     return data
