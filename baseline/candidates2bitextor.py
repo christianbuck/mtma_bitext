@@ -39,25 +39,19 @@ class ExternalProcessor(object):
         return line
 
     def process(self, line):
-        # sys.stderr.write("running preprocessor\n")
         line = self.preprocess_input(line)
         u_string = u"%s\n" % line
         u_string = u_string.encode("utf-8")
-        result = u_string  # fallback: return input
-        # with self._lock:
-        # sys.stderr.write("processing %d lines, %d bytes\n"
-        #                  % (len(u_string.split("\n")), len(u_string)))
-        # sys.stdout.write(u_string)
-        self.proc.stdin.write(u_string)
-        self.proc.stdin.flush()
-        if self.proc.poll() is None:
-            result = self.proc.stdout.readline()
-            result = self.postprocess_output(result)
-            # sys.stderr.write("read, %d bytes\n"
-            #                  % (len(result)))
-        else:  # prepro-process has died.
+
+        if self.proc.poll() is not None:
             sys.stderr.write("Process died, restarting\n")
             self.proc = self.popen(self.cmd)
+
+        self.proc.stdin.write(u_string)
+        self.proc.stdin.flush()
+        result = self.proc.stdout.readline()
+
+        result = self.postprocess_output(result)
         return result.decode("utf-8").strip()
 
 
@@ -85,7 +79,7 @@ class BoiperpipeProcessor(ExternalProcessor):
 
     def preprocess_input(self, line):
         line = line.strip().replace("\n", " ").replace("\r", "")
-        line = "_\t_\t_\t%s" %line
+        line = "_\t_\t_\t%s" % line
         return line
 
     def postprocess_output(self, line):
@@ -122,7 +116,7 @@ def process_buffer(buf, d):
             html = rawhtml.decode(encoding["encoding"])
         except:
             html = rawhtml.decode("utf-8", errors='ignore')
-    assert html is not None, "Error processing %s\n" %rawhtml
+    assert html is not None, "Error processing %s\n" % rawhtml
     html = html.replace(r"\r", "")
     d[url] = (header, html)
 
@@ -141,10 +135,15 @@ def read_file(f, d):
 
 def process_dict(d, html_prepro):
     for u, (header, html) in d.iteritems():
-        for prepro in html_prepro:
-            # sys.stderr.write('.')
-            html = prepro.process(html)
         original_url = header.split()[2]
+        try:
+            for prepro in html_prepro:
+                html = prepro.process(html)
+        except IOError:
+            sys.stderr.write("PreproError: skipping line for url: %s\n" 
+                             % original_url)
+            sys.stderr.flush()
+            continue
         text = html2text(html.encode("utf-8"))
         # html = base64.b64encode(html.encode("utf-8"))
         yield u, original_url, html, text
