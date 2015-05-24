@@ -24,7 +24,7 @@ class ExternalProcessor(object):
     def __init__(self, cmd):
         self.cmd = cmd
         if self.cmd is not None:
-            self.proc = self.popen(cmd)
+            self.proc = self.popen(self.cmd)
             self._lock = Lock()
 
     def popen(self, cmd):
@@ -50,10 +50,14 @@ class ExternalProcessor(object):
         # sys.stdout.write(u_string)
         self.proc.stdin.write(u_string)
         self.proc.stdin.flush()
-        result = self.proc.stdout.readline()
-        result = self.postprocess_output(result)
-        # sys.stderr.write("read, %d bytes\n"
-        #                  % (len(result)))
+        if self.proc.poll() is None:
+            result = self.proc.stdout.readline()
+            result = self.postprocess_output(result)
+            # sys.stderr.write("read, %d bytes\n"
+            #                  % (len(result)))
+        else:  # prepro-process has died.
+            sys.stderr.write("Process died, restarting\n")
+            self.proc = self.popen(self.cmd)
         return result.decode("utf-8").strip()
 
 
@@ -73,15 +77,20 @@ class TikaProcessor(ExternalProcessor):
     #     return line[-1].strip()
 
 
-class BoiperpipeProcessor(TikaProcessor):
+class BoiperpipeProcessor(ExternalProcessor):
 
-    def __init__(self, tikajar):
-        tikacmd = "java -jar %s" % (tikajar)
-        super(BoiperpipeProcessor, self).__init__(tikacmd)
+    def __init__(self, bpjar):
+        bpcmd = "java -jar %s" % (bpjar)
+        super(BoiperpipeProcessor, self).__init__(bpcmd)
+
+    def preprocess_input(self, line):
+        line = line.strip().replace("\n", " ").replace("\r", "")
+        line = "_\t_\t_\t%s" %line
+        return line
 
     def postprocess_output(self, line):
         line = line.split("\t")
-        assert len(line) == 5
+        assert len(line) == 4
         return line[-1].strip()
 
 
@@ -97,9 +106,10 @@ def process_buffer(buf, d):
         if not buf[skip].strip():
             empty_lines += 1
 
-    html = "".join(buf[skip + 1:])
+    rawhtml = "".join(buf[skip + 1:])
+    html = None
     try:
-        html = html.decode("utf-8")
+        html = rawhtml.decode("utf-8")
     except:
         try:
             detector = UniversalDetector()
@@ -109,9 +119,10 @@ def process_buffer(buf, d):
                     break
             detector.close()
             encoding = detector.result
-            html = html.decode(encoding["encoding"])
+            html = rawhtml.decode(encoding["encoding"])
         except:
-            html = html.decode("utf-8", errors='ignore')
+            html = rawhtml.decode("utf-8", errors='ignore')
+    assert html is not None, "Error processing %s\n" %rawhtml
     html = html.replace(r"\r", "")
     d[url] = (header, html)
 
