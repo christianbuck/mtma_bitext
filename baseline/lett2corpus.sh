@@ -16,7 +16,7 @@ LOG=${LETT/lett/log}
 BT=/home/buck/net/build/bitextor/bin
 
 mv ${LETT} ${LETT}.bak
-/home/buck/net/build/DataCollection/baseline/filter_emty_text_from_lett.py < ${LETT}.bal > ${LETT}
+/home/buck/net/build/DataCollection/baseline/filter_emty_text_from_lett.py < ${LETT}.bak > ${LETT}
 echo -n "LETT .. LETTR .. "
 ${BT}/bitextor-lett2lettr < ${LETT} > ${LETTR}
 echo -n "IDX .. "
