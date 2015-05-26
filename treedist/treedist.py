@@ -6,37 +6,36 @@ import sys
 from html5lib import treebuilders, treewalkers
 from zss import distance
 import chardet
+import re
 
 
-def update_cost(a, b):
+class EditCost(object):
 
-    if a.node_type != b.node_type:
-        return 10000
+    @staticmethod
+    def update_cost(a, b):
+        if a.node_type != b.node_type:
+            return 10000
 
-    # both nodes have the same type
-    if a.label == b.label:
-        return 0
+        # both nodes have the same type
+        if a.label == b.label:
+            return 0
 
-    if a.node_type == "tag":
-        return 10000  # don't allow 'translation' of tags
+        if a.node_type == "tag":
+            return 10000  # don't allow 'translation' of tags
 
-    if a.node_type == "meta":
-        return 0  # ignore meta for now
+        if a.node_type == "meta":
+            return 0  # ignore meta for now
 
-    if a.node_type == "chars":
-        na, nb = a.n_tokens, b.n_tokens
-        return 1 - (max(na, nb) + 10.) / (min(na, nb) + 10.)
+        if a.node_type == "chars":
+            na, nb = len(a), len(b)
+            return 1 - (max(na, nb) + 10.) / (min(na, nb) + 10.)
 
-
-def remove_cost(a):
-    if a.node_type == "tag":
-        return 1
-    else:
-        return len(MyDOM.get_label(a)) * 0.05
-
-
-def insert_cost(a):
-    return remove_cost(a)
+    @staticmethod
+    def remove_cost(a):
+        if a.node_type == "tag":
+            return 1
+        else:
+            return len(a) * 0.1
 
 
 class BinaryCosts(object):
@@ -62,7 +61,11 @@ class MyDOM(object):
         self.children = list()
         self.parent = parent
         self.depth = depth
-        self.n_tokens = len(self.label.split())
+        self.tokens = self.label.split()
+        self.tokenset = set(self.tokens)
+
+    def __len__(self):
+        return len(self.tokens)
 
     def __str__(self):
         pre = "  " * self.depth
@@ -76,6 +79,18 @@ class MyDOM(object):
         for c in self.children:
             s += str(c)
         return s
+
+    @staticmethod
+    def bracket_notation(node):
+        # {} are not allowed in the label
+        clean_label = node.label.replace(
+            "{", "#").replace("}", "#").replace("\n", " ")
+        s = "{ %s:'%s' " % (node.node_type, clean_label.encode("utf-8"))
+        for c in node.children:
+            s += node.bracket_notation(c)
+        s += "} "
+        s = re.sub("\s\s+", " ", s)
+        return s.replace(" ", "_").replace(':', "_")
 
     @staticmethod
     def get_children(node):
@@ -111,7 +126,6 @@ def build_tree(f):
     chars = ""
     root = MyDOM(u"root", None)
     node = root
-    in_script = False
     for token in stream:
         token_type = token.get("type", None)
 
@@ -148,6 +162,10 @@ def build_tree(f):
 
     return root
 
+
+def fix_bracket_format(s):
+    return re.sub(r"[^a-zA-Z0-9\{\}]+", r"", s)
+
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
@@ -155,11 +173,21 @@ if __name__ == "__main__":
                         help='source corpus')
     parser.add_argument('target', type=argparse.FileType('r'),
                         help='target corpus')
+    parser.add_argument('-writetrees', type=argparse.FileType('w'),
+                        help='write trees in bracket notation')
     parser.add_argument('-binary', action='store_true')
     args = parser.parse_args(sys.argv[1:])
 
     source_tree = build_tree(args.source)
     target_tree = build_tree(args.target)
+
+    if args.writetrees:
+        args.writetrees.write(
+            fix_bracket_format(MyDOM.bracket_notation(source_tree)))
+        args.writetrees.write("\n")
+        args.writetrees.write(
+            fix_bracket_format(MyDOM.bracket_notation(target_tree)))
+        sys.exit()
 
     if args.binary:
         print distance(source_tree, target_tree, MyDOM.get_children,
@@ -168,4 +196,6 @@ if __name__ == "__main__":
                        BinaryCosts.update_cost)
     else:
         print distance(source_tree, target_tree, MyDOM.get_children,
-                       insert_cost, remove_cost, update_cost)
+                       EditCost.remove_cost,
+                       EditCost.remove_cost,
+                       EditCost.update_cost)
