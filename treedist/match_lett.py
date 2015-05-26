@@ -31,6 +31,8 @@ if __name__ == "__main__":
         l, mime, enc, url, html, text = line.split("\t")
         html = base64.b64decode(html)
         tree = build_tree(html.split("\n"))
+        if tree == None:
+            continue
 
         if l == "en":
             lines_en.append((linenr, tree, line))

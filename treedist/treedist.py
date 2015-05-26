@@ -128,6 +128,9 @@ def build_tree(f):
     node = root
     for token in stream:
         token_type = token.get("type", None)
+        
+        if token_type.endswith("Error"):
+            return None
 
         if token_type == "Comment":  # ignore comments for now
             continue
