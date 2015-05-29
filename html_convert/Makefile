@@ -1,9 +1,9 @@
 # -*- GNUMakefile -*-
 
-GUMBO_SRC:= /home/cbuck/net/build/gumbo
+GUMBO_SRC:= /home/buck/net/build/gumbo
 GUMBO_INC:= ${GUMBO_SRC}/include
 GUMBO_LIB:= ${GUMBO_SRC}/lib
-CLD2_SRC := /home/cbuck/net/build/cld2
+CLD2_SRC := /home/buck/net/build/cld2
 CLD2_INC := ${CLD2_SRC}/public
 CLD2_LIB := ${CLD2_SRC}/internal
 CLD2_VAR := cld2_full
