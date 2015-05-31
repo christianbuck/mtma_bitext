@@ -18,22 +18,6 @@ def clean_whitespace(s):
     return "\n".join(re.sub("\s+", " ", l) for l in s)
 
 
-# def write_lett(sdict, tdict, slang, tlang, f):
-#     mime_type = "text/html"
-#     encoding = "charset=utf-8"
-#     for l, d in ((slang, sdict), (tlang, tdict)):
-#         for url, original_url, html, text in process_dict(d):
-#             f.write("{l}\t{mime}\t{enc}\t{name}\t{html}\t{text}\n".format(
-#                 l=l,
-#                 mime=mime_type,
-#                 enc=encoding,
-#                 name=original_url,
-#                 html=base64.b64encode(html),
-#                 text=base64.b64encode(text.encode("utf-8"))))
-# html=base64.b64encode(html.encode("utf-8")),
-# text=base64.b64encode(text.encode("utf-8"))))
-
-
 def read_file(filename, args, encoding):
     full_file_name = os.path.join(args.prefix, filename)
     sys.stderr.write("reading: %s\n" % full_file_name)
@@ -100,10 +84,6 @@ def mainlang(langsplit_output):
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
-    # parser.add_argument('source', type=argparse.FileType('r'),
-    #                     help='source corpus')
-    # parser.add_argument('target', type=argparse.FileType('r'),
-    #                     help='target corpus')
     parser.add_argument('outfile', type=argparse.FileType('w'),
                         help='output file')
     parser.add_argument('-prefix', help='prefix added to make filenames')
@@ -130,6 +110,10 @@ if __name__ == "__main__":
 
         if lang == "INVALID":
             sys.stderr.write("Error processing: %s\n" % line)
+            continue
+        if lang not in [args.slang, args.tlang]:
+            sys.stderr.write(
+                "Unexpected main language: %s - skipping %s\n" % (lang, line))
             continue
 
         args.outfile.write("{l}\t{mime}\t{enc}\t{name}\t{html}\t{text}\n"
