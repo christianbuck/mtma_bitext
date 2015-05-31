@@ -122,6 +122,8 @@ void PrintLanguageStats(const int flags, const string& header,
         }
       }
     }
+  } else {
+    std::cerr << "prediction unrealiable" << std::endl;
   }
 }
 
