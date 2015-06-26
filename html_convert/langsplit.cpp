@@ -13,6 +13,7 @@
 #include <algorithm>
 
 #include "compact_lang_det.h"
+#include "header.h"
 // #include "tld.h"
 
 using CLD2::int32;
@@ -37,45 +38,6 @@ std::vector<std::string> split(const std::string& s, const char delim = ' ') {
   return tokens;
 }
 
-class Header {
- public:
-  explicit Header(const string& header) {
-    for (const auto& value : split(header, ' ')) {
-      if (value.find("tld:") == 0) {
-        tld_ = value.substr(4);
-      } else if (value.find("uri:") == 0) {
-        uri_ = value.substr(4);
-      } else if (value.find("encoding:") == 0) {
-        encoding_ = value.substr(9);
-      }
-    }
-  }
-
-  const string get_tld() const { return tld_; }
-  const string get_uri() const { return uri_; }
-  const string get_encoding() const { return encoding_; }
-
- private:
-  string uri_;
-  string tld_;
-  string encoding_;
-};
-
-/*
-// Using libidn to get tld
-string uri2tld(const string& uri) {
-  char* tld_cstr = nullptr;
-  const int rc = tld_get_z(uri.c_str(), &tld_cstr);
-  if (rc == TLD_SUCCESS && tld_cstr != nullptr) {
-    const string result = string(tld_cstr);
-    return result;
-    free(tld_cstr);
-  } else {
-    return "";
-  }
-}
-*/
-
 string domain_suffix(const string& url) {
 	const string protocol_separator = "://";
 	size_t start = url.find(protocol_separator);
@@ -85,7 +47,7 @@ string domain_suffix(const string& url) {
 		start += protocol_separator.size();
 	}
 
-	const string path_separator = ":/";
+	const string path_separator = "/";
 	size_t end = url.find_first_of(path_separator, start);
 	if (end == string::npos) {
 		end = url.size();
@@ -110,7 +72,8 @@ void PrintLanguageStats(const int flags, const string& header,
   const Header header_values(header);
   const string uri = header_values.get_uri();
   //const string tld = uri2tld(uri);
-  const string tld = domain_suffix(uri);
+  const string tld = header_values.get_tld();
+  // const string tld = domain_suffix(uri);
 
   bool is_plain_text = true;
   CLD2::CLDHints cld_hints = {NULL, NULL, UNKNOWN_ENCODING,
@@ -144,7 +107,7 @@ void PrintLanguageStats(const int flags, const string& header,
         const string chunk = string(buffer, rc.offset, rc.bytes);
 
         std::cout << header << " language:" << lang_code
-                  << " offset:" << rc.offset << " bytes: " << rc.bytes
+                  << " offset:" << rc.offset << " bytes:" << rc.bytes
                   << std::endl;
         std::cout << chunk << std::endl;
       }
@@ -159,6 +122,8 @@ void PrintLanguageStats(const int flags, const string& header,
         }
       }
     }
+  } else {
+    std::cerr << "prediction unrealiable" << std::endl;
   }
 }
 

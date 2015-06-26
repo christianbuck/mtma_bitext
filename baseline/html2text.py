@@ -3,6 +3,9 @@
 
 import html5lib
 import re
+import sys
+import chardet
+import unicodedata
 from html5lib import treebuilders, treewalkers
 
 # from: https://developer.mozilla.org/en-US/docs/Web/HTML/Block-level_elements
@@ -15,10 +18,47 @@ block_level_elements = set([u'address', u'article', u'aside', u'audio',
                             u'tfoot', u'ul', u'video'])
 
 
+def read_file(filename):
+    # sys.stderr.write("reading: %s\n" % filename)
+    try:
+        f = open(filename, 'r')
+        html = f.read()
+    except IOError:
+        sys.stderr.write("Cannot read file: %s\n" % filename)
+        return ""
+    try:
+        html = html.decode("utf-8")
+    except:
+        encoding = chardet.detect(html)
+        try:
+            html = html.decode(encoding["encoding"])
+        except:
+            sys.stderr.write(
+                "Fallback: ignoring errors for file%s\n" % filename)
+            return html.decode("utf-8", errors='ignore')
+    return html
+
+
 def clean_whitespace(s):
     # remove empty lines
     s = [l.strip() for l in s.split("\n") if l.strip()]
     return "\n".join(re.sub("\s+", " ", l) for l in s)
+
+
+def _sanitize(c):
+    category = unicodedata.category(c)[0]
+    if category == 'C':  # remove control characters
+        return ' '
+    if category == 'Z':  # replace all spaces by normal ones
+        return ' '
+    return c
+
+
+def clean_utf8(s):
+    """ Removes most funny character from Unicode """
+    s = unicodedata.normalize('NFC', s)
+    s = u"".join(map(_sanitize, s))
+    return s
 
 
 def html2text(html):
@@ -52,13 +92,15 @@ def html2text(html):
             if current_line and current_line[-1] != u" ":
                 current_line.append(u" ")
 
+        if token_name == 'span':
+            current_line.append(u" ")
+
     if current_line:
         outbuf.append(u"".join(current_line))
     return clean_whitespace("\n".join(outbuf))
 
 
 if __name__ == "__main__":
-    import sys
     buffer = []
     for line in sys.stdin:
         buffer.append(line)
